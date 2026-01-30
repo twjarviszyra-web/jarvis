@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Armory | JARVIS</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/animations.css">
+    <style>
+        .download-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .download-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="nav-container">
+        <div class="logo">
+            <span style="font-size: 28px;">⚪</span> JARVIS
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="dashboard.html">Command Center</a>
+            <a href="downloads.html" class="active">Armory</a>
+            <a href="mobile.html">Mobile App</a>
+            <a href="buy.html">Buy JARVIS</a>
+        </div>
+    </nav>
+
+    <div class="container fade-in">
+        <h1 class="text-gradient" style="margin-bottom: 10px;">SYSTEM ARMORY</h1>
+        <p style="color: var(--text-glass); margin-bottom: 40px;">Secure downloads for operative software.</p>
+
+        <!-- Access Denied State (Default) -->
+        <div id="access-denied" class="glass-panel" style="text-align: center; border-color: #ff4444; display: none;">
+            <h2 style="color: #ff4444; margin-bottom: 20px;">⚠️ ACCESS RESTRICTED</h2>
+            <p style="color: var(--text-glass); margin-bottom: 20px;">
+                These files are classified for PRO operatives only. Please upgrade your license.
+            </p>
+            <a href="buy.html" class="btn-primary">Acquire License</a>
+        </div>
+
+        <!-- Access Granted State -->
+        <div id="access-granted" class="glass-panel" style="display: none;">
+            <div class="download-item">
+                <div>
+                    <h3>JARVIS Core (Desktop Exe)</h3>
+                    <p style="color: var(--text-glass); font-size: 12px;">v2.0.0 | Windows 10/11 | 64-bit | Full
+                        Automation Support</p>
+                </div>
+                <a href="https://mega.nz/file/KooDxb7A#d0RIhCBIagU_sEEx1P47ZgNpNDkBHSNrsvumamxoEdo" target="_blank"
+                    class="btn-primary" style="text-decoration: none;">Download (Mega)</a>
+            </div>
+
+            <div class="download-item">
+                <div>
+                    <h3>WhatsApp Control Module (AI)</h3>
+                    <p style="color: var(--text-glass); font-size: 12px;">Background Auto-Reply | Image Generation |
+                        Custom Behavior</p>
+                </div>
+                <a href="https://github.com/twjarviszyra-web/jarvis-whatsapp-automation/releases/download/Whatsapp_AI/whatsapp.zip"
+                    target="_blank" class="btn-primary" style="text-decoration: none;">Download (GitHub)</a>
+            </div>
+
+            <div class="download-item">
+                <div>
+                    <h3>Mobile Companion (APK)</h3>
+                    <p style="color: var(--text-glass); font-size: 12px;">Android 12+ | Connects via ADB | Remote Call &
+                        Auto</p>
+                </div>
+                <a href="https://github.com/twjarviszyra-web/jarvis-whatsapp-automation/releases/download/TW_AI/TW_AI.apk"
+                    target="_blank" class="btn-primary" style="text-decoration: none;">Download APK</a>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        auth.checkProtect();
+
+        const user = auth.getSession();
+        const deniedEl = document.getElementById('access-denied');
+        const grantedEl = document.getElementById('access-granted');
+
+        if (user && user.type === 'paid') {
+            grantedEl.style.display = 'block';
+        } else {
+            deniedEl.style.display = 'block';
+        }
+    </script>
+</body>
+
+</html>

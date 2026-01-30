@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Command Center | JARVIS</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/animations.css">
+</head>
+
+<body>
+    <!-- Nav -->
+    <nav class="nav-container">
+        <div class="logo">
+            <span style="font-size: 28px;">⚪</span> JARVIS
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="dashboard.html" class="active">Command Center</a>
+            <a href="downloads.html">Armory</a>
+            <a href="mobile.html">Mobile App</a>
+            <a href="buy.html">Buy JARVIS</a>
+        </div>
+    </nav>
+
+    <div class="container fade-in">
+        <div
+            style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; border-bottom: 1px solid var(--border-glass); padding-bottom: 20px;">
+            <div>
+                <h4 style="color: var(--primary);">WELCOME BACK, SIR.</h4>
+                <h1 id="user-display-name">OPERATIVE</h1>
+            </div>
+            <div class="glass-panel" style="padding: 10px 20px; font-size: 14px;">
+                STATUS: <span id="status-badge" style="color: #ff4444; font-weight: bold;">UNVERIFIED</span>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+
+            <!-- Quick Actions -->
+            <div class="glass-panel">
+                <h3 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 24px;">⚡</span> Quick Actions
+                </h3>
+                <div style="display: grid; gap: 15px;">
+                    <a href="downloads.html" class="btn-primary" style="text-align: center;">Access Downloads</a>
+                    <button onclick="alert('System scan initiated...')" class="glass-panel"
+                        style="width:100%; cursor: pointer; color: var(--text-glass);">Run Diagnostics</button>
+                    <a href="buy.html" id="upgrade-btn" class="btn-primary"
+                        style="text-align: center; border-color: gold; color: gold;">Upgrade to PRO</a>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="glass-panel">
+                <h3 style="margin-bottom: 20px;">System Stats</h3>
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="color: var(--text-glass);">API Queries Today</span>
+                        <span>0 / 1000</span>
+                    </div>
+                    <div style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px;">
+                        <div style="height: 100%; width: 0%; background: var(--primary);"></div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="color: var(--text-glass);">Storage Used</span>
+                        <span>0 GB</span>
+                    </div>
+                    <div style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px;">
+                        <div style="height: 100%; width: 0%; background: var(--secondary);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="glass-panel">
+                <h3 style="margin-bottom: 20px;">System Logs</h3>
+                <ul style="list-style: none; color: var(--text-glass); font-size: 14px;">
+                    <li style="margin-bottom: 10px;">• Login successfully from chrome_win10</li>
+                    <li style="margin-bottom: 10px;">• System initialized at <span id="time-log"></span></li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        // Guard Check
+        auth.checkProtect();
+
+        // Populate Dashboard
+        const user = auth.getSession();
+        if (user) {
+            document.getElementById('user-display-name').textContent = user.name.toUpperCase();
+            document.getElementById('profile-name').textContent = user.name;
+            document.getElementById('time-log').textContent = new Date().toLocaleTimeString();
+
+            const badge = document.getElementById('status-badge');
+            const upgradeBtn = document.getElementById('upgrade-btn');
+
+            if (user.type === 'paid') {
+                badge.textContent = "PRO LICENSE ACTIVE";
+                badge.style.color = "#00ff88"; // Green
+                upgradeBtn.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>
