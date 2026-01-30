@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COMMAND OVERRIDE | ADMIN</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        body {
+            border-top: 5px solid #ff4444;
+        }
+
+        .admin-header {
+            color: #ff4444;
+        }
+
+        /* User Grid Styles */
+        .user-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .user-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            padding: 15px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .user-card.banned {
+            border-color: #ff4444;
+            opacity: 0.6;
+        }
+
+        .user-name {
+            font-weight: bold;
+            color: var(--text-main);
+        }
+
+        .user-email {
+            font-size: 12px;
+            color: var(--text-glass);
+            word-break: break-all;
+        }
+
+        .user-role {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 10px;
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .user-role.admin {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+        }
+
+        .action-bar {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .btn-sm:hover {
+            background: #ff4444;
+            color: #fff;
+        }
+    </style>
+
+    <!-- Firebase Compat Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+    <div class="container fade-in">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1 class="admin-header">COMMAND OVERRIDE SYSTEM</h1>
+                <p style="color: var(--text-glass);">Welcome, Administrator.</p>
+            </div>
+            <button id="logout-btn" class="btn-primary" style="background: rgba(255, 68, 68, 0.1);">TERMINATE
+                SESSION</button>
+        </div>
+
+        <!-- Stats -->
+        <div style="margin-top: 30px; display: flex; gap: 20px;">
+            <div class="glass-panel" style="flex: 1; text-align: center;">
+                <h2 id="total-users" style="color: var(--primary);">0</h2>
+                <p style="font-size: 12px; color: var(--text-glass);">OPERATIVES</p>
+            </div>
+            <div class="glass-panel" style="flex: 1; text-align: center;">
+                <h2 id="active-users" style="color: #00ff88;">0</h2>
+                <p style="font-size: 12px; color: var(--text-glass);">ONLINE NOW</p>
+            </div>
+        </div>
+
+        <div style="margin: 40px 0; display: grid; gap: 40px;">
+            <!-- Giveaway Tool -->
+            <div class="glass-panel" style="border-color: #ff4444;">
+                <h3 class="admin-header">🎁 INITIATE GIVEAWAY</h3>
+                <p style="color: var(--text-glass); margin-bottom: 20px;">
+                    Broadcast a free activation key to the public "The Hangar" channel.
+                </p>
+                <form id="giveaway-form">
+                    <input type="text" id="giveaway-key" class="input-field"
+                        placeholder="ENTER LICENSE KEY (e.g. JARVIS-XXXX-YYYY)" required>
+                    <button type="submit" class="btn-primary"
+                        style="margin-top: 15px; border-color: #ff4444; color: #ff4444;">
+                        BROADCAST DROP
+                    </button>
+                </form>
+            </div>
+
+            <!-- User Management -->
+            <div class="glass-panel">
+                <h3>OPERATIVE DATABASE</h3>
+                <p style="color: var(--text-glass); margin-bottom: 20px;">Manage access levels and security clearances.
+                </p>
+                <div id="user-list" class="user-grid">
+                    <!-- Users load here -->
+                    <p style="color: var(--text-glass);">Scanning database...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/firebase-config.js"></script>
+    <script src="assets/js/auth.js"></script>
+
+    <script>
+        // Wait for auth init
+        const initAdmin = setInterval(() => {
+            if (window.authService) {
+                clearInterval(initAdmin);
+                // Verify Admin Access
+                if (!window.authService.isAdmin()) {
+                    window.location.href = 'login.html';
+                }
+                loadUsers();
+            }
+        }, 100);
+
+        // Load Users
+        function loadUsers() {
+            window.db.collection("users").orderBy("joinedAt", "desc").onSnapshot(snapshot => {
+                const list = document.getElementById('user-list');
+                const totalEl = document.getElementById('total-users');
+                list.innerHTML = '';
+
+                totalEl.textContent = snapshot.size;
+
+                snapshot.forEach(doc => {
+                    const u = doc.data();
+                    const isBanned = u.status === 'banned';
+
+                    const card = document.createElement('div');
+                    card.className = `user-card ${isBanned ? 'banned' : ''}`;
+                    card.innerHTML = `
+                        <div class="user-role ${u.role}">${u.role.toUpperCase()}</div>
+                        <div class="user-name">${u.name || 'Unknown'}</div>
+                        <div class="user-email">${u.email}</div>
+                        <div style="font-size: 10px; color: var(--text-glass); margin-top: 5px;">
+                            UID: ${u.uid.substr(0, 8)}...
+                        </div>
+                        <div class="action-bar">
+                            <button class="btn-sm" onclick="toggleBan('${u.uid}', ${!isBanned})">
+                                ${isBanned ? 'UNBAN' : 'BAN AGENT'}
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
+            });
+        }
+
+        // Ban Function
+        window.toggleBan = async (uid, shouldBan) => {
+            if (confirm(`Are you sure you want to ${shouldBan ? 'BAN' : 'UNBAN'} this operative?`)) {
+                try {
+                    await window.db.collection("users").doc(uid).update({
+                        status: shouldBan ? 'banned' : 'active'
+                    });
+                } catch (err) {
+                    alert("Action failed: " + err.message);
+                }
+            }
+        };
+
+        const giveawayForm = document.getElementById('giveaway-form');
+        const keyInput = document.getElementById('giveaway-key');
+
+        giveawayForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const key = keyInput.value.trim();
+            if (!key) return;
+
+            const confirmDrop = confirm("Broadcast this key to the public channel?");
+            if (!confirmDrop) return;
+
+            try {
+                // Post special giveaway message
+                await window.db.collection("messages").add({
+                    text: `🎊 GIVEAWAY ALERT! Free Activation Key: ${key} 🎊\nRedeem immediately!`,
+                    sender: 'SYSTEM ADMIN',
+                    uid: 'admin',
+                    isAdmin: true,
+                    type: 'giveaway',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert("Key broadcasted successfully.");
+                keyInput.value = '';
+            } catch (err) {
+                alert("Broadcast failed: " + err.message);
+            }
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            window.authService.logout();
+        });
+    </script>
+</body>
+
+</html>

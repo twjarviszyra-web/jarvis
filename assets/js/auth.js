@@ -1,89 +1,256 @@
 /* 
 ====================================
-  JARVIS AUTHENTICATION MANAGER
-  Handles: Login, Signup, Session
+  JARVIS AUTHENTICATION MANAGER (Global)
+  Handles: Login, Signup, Session, Google Auth, Security, Profile
 ====================================
 */
 
 class AuthService {
     constructor() {
-        this.userKey = 'jarvis_user';
+        this.user = null;
+        this.currentUserData = null; // Store Firestore user data
+        this.isInitialized = false; // Flag to prevent premature redirects
+        this.init();
     }
 
-    // SIMULATED LOGIN - In production, replace with Firebase.auth().signInWithEmailAndPassword
-    login(email, password) {
-        return new Promise((resolve, reject) => {
-            console.log("Authenticating...");
-            setTimeout(() => {
-                // Mock logic
-                if (email.includes("@") && password.length > 5) {
-                    const user = {
-                        uid: "user_" + Math.random().toString(36).substr(2, 9),
-                        name: email.split("@")[0],
-                        email: email,
-                        type: "free", // Default to free
-                        joined: new Date().toISOString()
-                    };
-                    this.saveSession(user);
-                    resolve(user);
-                } else {
-                    reject("Invalid credentials. Password must be 6+ chars.");
+    init() {
+        const checkAuth = () => {
+            if (window.auth) {
+                window.auth.onAuthStateChanged(async (user) => {
+                    this.user = user;
+
+                    if (user) {
+                        // ADMIN BYPASS or Email Verified Check
+                        if (user.email === 'ayush' || user.emailVerified) {
+                            console.log("Auth State: Logged In as " + user.email);
+                            await this.fetchUserData(user.uid);
+                            this.updateUI(true);
+                        } else {
+                            // User logged in but NOT verified
+                            console.log("User not verified.");
+                            this.updateUI(false);
+                        }
+                    } else {
+                        console.log("Auth State: Logged Out");
+                        this.currentUserData = null;
+                        this.updateUI(false);
+                    }
+
+                    this.isInitialized = true; // Auth State is now CONFIRMED
+                });
+            } else {
+                setTimeout(checkAuth, 100);
+            }
+        };
+        checkAuth();
+    }
+
+    // Fetch user details (Role/Ban Status)
+    async fetchUserData(uid) {
+        try {
+            const doc = await window.db.collection("users").doc(uid).get();
+            if (doc.exists) {
+                this.currentUserData = doc.data();
+
+                // Security Check: Is Banned?
+                if (this.currentUserData.status === 'banned') {
+                    alert("SECURITY ALERT: Your access has been revoked by Administrator.");
+                    await this.logout();
                 }
-            }, 1500); // Fake network delay
-        });
+            }
+        } catch (error) {
+            console.error("Error fetching user data:", error);
+        }
     }
 
-    // SIMULATED GOOGLE LOGIN
-    loginWithGoogle() {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const user = {
-                    uid: "google_" + Math.random().toString(36).substr(2, 9),
-                    name: "Google User",
-                    email: "user@gmail.com",
-                    type: "free",
-                    joined: new Date().toISOString()
+    updateUI(isLoggedIn) {
+        const navLogin = document.getElementById('nav-login');
+        if (navLogin) {
+            if (isLoggedIn) {
+                navLogin.textContent = "Sign Out";
+                navLogin.href = "#";
+                navLogin.onclick = (e) => {
+                    e.preventDefault();
+                    this.logout();
                 };
-                this.saveSession(user);
-                resolve(user);
-            }, 1500);
-        });
+            } else {
+                navLogin.textContent = "Login";
+                navLogin.href = "login.html";
+                navLogin.onclick = null;
+            }
+        }
     }
 
-    logout() {
-        localStorage.removeItem(this.userKey);
-        window.location.href = 'index.html';
+    // ENFORCE SECURITY PROTOCOL (Call this on every protected page)
+    enforceProtocol() {
+        const check = setInterval(() => {
+            // Wait until Firebase is loaded AND we have received the first auth state
+            if (window.auth && this.isInitialized) {
+                clearInterval(check);
+                const user = window.auth.currentUser;
+                const isAdminSession = sessionStorage.getItem('jarvis_admin');
+
+                // 1. Check if completely logged out (no user object)
+                if (!user && !isAdminSession) {
+                    console.warn("Unauthorized: No User. Redirecting...");
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 2. Check Verification (Skip for Admin)
+                if (user && !user.emailVerified && user.email !== 'ayush' && !isAdminSession) {
+                    alert("ACCESS DENIED: Email not verified.\nPlease check your inbox and verify your identity.");
+                    window.location.href = 'login.html';
+                }
+            }
+        }, 200);
+
+        // Timeout backup just in case firebase hangs forever
+        setTimeout(() => {
+            if (!window.auth && !sessionStorage.getItem('jarvis_admin')) {
+                // user is offline or blocked, maybe redirect? 
+                // window.location.href = 'login.html'; 
+            }
+        }, 8000);
     }
 
-    saveSession(user) {
-        localStorage.setItem(this.userKey, JSON.stringify(user));
+    // Signup (Email/Pass)
+    async signup(name, email, password) {
+        try {
+            if (password.length < 6) throw new Error("Security Protocol Failed: Password too short.");
+
+            const userCredential = await window.auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+
+            // Send Verification Email
+            await user.sendEmailVerification();
+
+            // Save to Firestore
+            await this.saveUserToDB(user, name);
+
+            return user;
+        } catch (error) {
+            console.error("Signup Error:", error);
+            throw new Error(this.formatError(error));
+        }
     }
 
-    getSession() {
-        return JSON.parse(localStorage.getItem(this.userKey));
+    // Login (Email/Pass)
+    async login(email, password) {
+        // ADMIN BACKDOOR
+        if (email.toLowerCase() === 'ayush' && password === 'ayush12345') {
+            sessionStorage.setItem('jarvis_admin', 'true');
+            window.location.href = 'admin.html';
+            return;
+        }
+
+        try {
+            const userCredential = await window.auth.signInWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+
+            if (!user.emailVerified) {
+                throw new Error("Email not verified. Please check your inbox.");
+            }
+
+            return user;
+
+        } catch (error) {
+            console.error("Login Error:", error);
+            throw new Error(this.formatError(error));
+        }
     }
 
-    isAuthenticated() {
-        return !!this.getSession();
+    // Forgot Password
+    async resetPassword(email) {
+        try {
+            await window.auth.sendPasswordResetEmail(email);
+            return "Password reset link sent to your email.";
+        } catch (error) {
+            console.error("Reset Error:", error);
+            throw new Error(this.formatError(error));
+        }
     }
 
-    // ADMIN ONLY: Mock upgrade
-    upgradeUser() {
-        const user = this.getSession();
-        if (user) {
-            user.type = 'paid';
-            this.saveSession(user);
+    // Google Sign-In
+    async loginWithGoogle() {
+        try {
+            // Google accounts are Auto-Verified
+            const result = await window.auth.signInWithPopup(window.googleProvider);
+            const user = result.user;
+
+            // Save/Update in Firestore
+            await this.saveUserToDB(user, user.displayName || "Google Operative");
+
+            return user;
+        } catch (error) {
+            console.error("Google Auth Error:", error);
+            throw new Error(this.formatError(error));
+        }
+    }
+
+    // Centralized User Saving
+    async saveUserToDB(user, name) {
+        const userRef = window.db.collection("users").doc(user.uid);
+        const snapshot = await userRef.get();
+
+        if (!snapshot.exists) {
+            await userRef.set({
+                uid: user.uid,
+                name: name,
+                email: user.email,
+                photoURL: user.photoURL || null,
+                role: 'operative', // Default role
+                status: 'active',
+                joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } else {
+            // Update last login
+            await userRef.update({
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+    }
+
+    // Update Profile (Name, Phone)
+    async updateProfile(uid, data) {
+        try {
+            await window.db.collection("users").doc(uid).update(data);
+            if (this.currentUserData && this.currentUserData.uid === uid) {
+                this.currentUserData = { ...this.currentUserData, ...data };
+            }
             return true;
+        } catch (err) {
+            console.error("Update Profile Error:", err);
+            throw err;
         }
-        return false;
     }
 
-    // Guard for protected pages
-    checkProtect() {
-        if (!this.isAuthenticated()) {
+    async logout() {
+        try {
+            await window.auth.signOut();
+            sessionStorage.removeItem('jarvis_admin');
             window.location.href = 'login.html';
+        } catch (error) {
+            console.error("Logout Error:", error);
         }
+    }
+
+    formatError(error) {
+        if (error.code === 'auth/operation-not-allowed') return "System Error: Email Auth disabled in configuration.";
+        if (error.code === 'auth/email-already-in-use') return "Email already registered.";
+        if (error.code === 'auth/user-not-found') return "No account found.";
+        if (error.code === 'auth/wrong-password') return "Incorrect Password.";
+        return error.message || "Authentication Failed.";
+    }
+
+    isAdmin() {
+        // Local Admin Session OR Firestore Admin Role
+        const sessionAdmin = !!sessionStorage.getItem('jarvis_admin');
+        const dbAdmin = this.currentUserData && this.currentUserData.role === 'admin';
+        return sessionAdmin || dbAdmin;
     }
 }
 
-const auth = new AuthService();
+// Global Instance
+window.authService = new AuthService();

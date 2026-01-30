@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hangar (Community) | JARVIS</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/animations.css">
+    <style>
+        .chat-container {
+            height: 60vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-glass);
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 15px;
+            border-radius: 8px;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .message.admin {
+            border-left: 3px solid #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+        }
+
+        .message.giveaway {
+            border: 1px solid var(--primary);
+            background: rgba(0, 243, 255, 0.1);
+            text-align: center;
+            max-width: 100%;
+        }
+
+        .sender-name {
+            font-size: 12px;
+            color: var(--primary);
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .sender-name.admin {
+            color: #ff4444;
+        }
+
+        .msg-text {
+            color: var(--text-main);
+            font-size: 14px;
+        }
+
+        .msg-time {
+            font-size: 10px;
+            color: var(--text-glass);
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+
+    <!-- Firebase Compat Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+    <nav class="nav-container">
+        <div class="logo">
+            <span style="font-size: 28px;">⚪</span> JARVIS
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="community.html" class="active">Community</a>
+            <a href="mobile.html">Mobile App</a>
+            <a href="buy.html">Buy JARVIS</a>
+            <a href="login.html" id="nav-login">Login</a>
+        </div>
+    </nav>
+
+    <div class="container fade-in">
+        <h1 class="text-gradient" style="margin-bottom: 10px;">THE HANGAR</h1>
+        <p style="color: var(--text-glass); margin-bottom: 30px;">
+            Community Comm-Link. Discuss features, leave reviews, and watch for Admin drops.
+        </p>
+
+        <!-- Chat Interface -->
+        <div class="glass-panel">
+            <div id="chat-feed" class="chat-container">
+                <!-- Messages load here -->
+                <div style="text-align: center; color: var(--text-glass); margin-top: 20px;">
+                    Initializing Secure Link...
+                </div>
+            </div>
+
+            <form id="chat-form" class="input-area" style="display: none;">
+                <input type="text" id="msg-input" class="input-field" placeholder="Transmit message..." required
+                    autocomplete="off">
+                <button type="submit" class="btn-primary">SEND</button>
+            </form>
+            <p id="login-warning" style="color: #ff4444; font-size: 12px; margin-top: 10px; display: none;">
+                * Authentication required to transmit. <a href="login.html" style="text-decoration: underline;">Login
+                    here</a>.
+            </p>
+        </div>
+    </div>
+
+    <script src="assets/js/firebase-config.js"></script>
+    <script src="assets/js/auth.js"></script>
+
+    <script>
+        const chatFeed = document.getElementById('chat-feed');
+        const chatForm = document.getElementById('chat-form');
+        const msgInput = document.getElementById('msg-input');
+        const loginWarning = document.getElementById('login-warning');
+
+        // Check Auth State for UI - Use window.auth
+        const checkAuthLoop = setInterval(() => {
+            if (window.auth) {
+                clearInterval(checkAuthLoop);
+
+                window.auth.onAuthStateChanged(user => {
+                    const isAdmin = window.authService.isAdmin();
+                    if (user || isAdmin) {
+                        chatForm.style.display = 'flex';
+                        loginWarning.style.display = 'none';
+                    } else {
+                        chatForm.style.display = 'none';
+                        loginWarning.style.display = 'block';
+                    }
+                });
+
+                // Load Messages
+                setupRealtimeListener();
+            }
+        }, 100);
+
+        function setupRealtimeListener() {
+            window.db.collection("messages")
+                .orderBy("timestamp", "desc")
+                .limit(50)
+                .onSnapshot((snapshot) => {
+                    chatFeed.innerHTML = '';
+                    const messages = [];
+                    snapshot.forEach(doc => messages.push(doc.data()));
+
+                    // Reverse to show newest at bottom
+                    messages.reverse().forEach(msg => {
+                        const div = document.createElement('div');
+                        div.className = `message ${msg.type || ''}`;
+
+                        const isGiveaway = msg.type === 'giveaway';
+                        const nameColor = msg.isAdmin ? 'admin' : '';
+                        const nameText = msg.isAdmin ? 'ADMIN COMMAND' : (msg.sender || 'Unknown');
+
+                        // Handle timestamp
+                        let timeStr = 'Just now';
+                        if (msg.timestamp) {
+                            timeStr = new Date(msg.timestamp.seconds * 1000).toLocaleTimeString();
+                        }
+
+                        div.innerHTML = `
+                            <div class="sender-name ${nameColor}">${nameText}</div>
+                            <div class="msg-text">${msg.text}</div>
+                            <div class="msg-time">${timeStr}</div>
+                        `;
+                        chatFeed.appendChild(div);
+                    });
+                    chatFeed.scrollTop = chatFeed.scrollHeight;
+                }, (error) => {
+                    console.error("Chat Error:", error);
+                    chatFeed.innerHTML = `<div style="text-align:center; color:red;">Connection Signal Lost: ${error.message}</div>`;
+                });
+        }
+
+        // Send Message
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = msgInput.value.trim();
+            if (!text) return;
+
+            const user = window.auth.currentUser;
+            const isAdmin = window.authService.isAdmin();
+
+            if (!user && !isAdmin) return;
+
+            try {
+                await window.db.collection("messages").add({
+                    text: text,
+                    sender: isAdmin ? 'ADMIN' : (user.displayName || user.email.split('@')[0]),
+                    uid: isAdmin ? 'admin' : user.uid,
+                    isAdmin: isAdmin,
+                    type: isAdmin ? 'admin' : 'chat',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                msgInput.value = '';
+            } catch (err) {
+                console.error("Transmission failed:", err);
+                alert("Failed to send message: " + err.message);
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -15,7 +15,9 @@
         </div>
         <div class="nav-links">
             <a href="index.html">Home</a>
+            <a href="community.html">Community</a>
             <a href="mobile.html">Mobile App</a>
+            <a href="login.html">Login</a>
         </div>
     </nav>
     <div class="container glass-panel" style="margin-top: 120px; color: var(--text-glass);">
@@ -33,6 +35,17 @@
         <p>Your API keys are stored in your local browser storage (localStorage) or local configuration files. They are
             never sent to our servers.</p>
     </div>
+    </div>
+
+    <!-- Firebase Compat Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="assets/js/firebase-config.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        window.authService.enforceProtocol();
+    </script>
 </body>
 
 </html>

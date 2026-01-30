@@ -8,8 +8,8 @@
     <meta name="description" content="Next-generation AI assistant for power users.">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="./assets/css/style.css">
-    <link rel="stylesheet" href="./assets/css/animations.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/animations.css">
 
     <!-- Favicon (Emoji for now) -->
     <link rel="icon"
@@ -31,9 +31,11 @@
         </div>
         <div class="nav-links">
             <a href="index.html" class="active">Home</a>
+            <a href="community.html">Community</a>
             <a href="features.html">Capabilities</a>
             <a href="mobile.html">Mobile App</a>
             <a href="buy.html">Buy JARVIS</a>
+            <a href="login.html" id="nav-login">Login</a>
         </div>
     </nav>
 
@@ -134,8 +136,18 @@
     </footer>
 
     <!-- Scripts -->
+    <!-- Firebase Compat Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script src="assets/js/firebase-config.js"></script>
+    <script src="assets/js/auth.js"></script>
     <script src="assets/js/config.js"></script>
     <script>
+        // Enforce Security Protocol
+        window.authService.enforceProtocol();
+
         // Simple loader logic for index
         window.addEventListener('load', () => {
             setTimeout(() => {
@@ -144,6 +156,5 @@
         });
     </script>
 </body>
-
 
 </html>
